@@ -23,20 +23,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
-public class AsmTransform extends Transform {
-    private Map<String, File> modifyMap = new HashMap<>();
-
+public class MyTransform extends Transform {
     @Override
     public String getName() {
-        return AsmTransform.class.getSimpleName();
+        return MyTransform.class.getSimpleName();
     }
 
     @Override
@@ -64,14 +61,6 @@ public class AsmTransform extends Transform {
             transformInvocation.getOutputProvider().deleteAll();
         }
 
-        traversalInput(transformInvocation);
-    }
-
-    /**
-     * 遍历输入，分别遍历其中的jar以及directory
-     */
-    private void traversalInput(TransformInvocation transformInvocation) throws IOException {
-        // 获取输入（消费型输入，需要传递给下一个Transform）
         for (TransformInput transformInput : transformInvocation.getInputs()) {
             for (JarInput jarInput : transformInput.getJarInputs()) {
                 transformJar(transformInvocation, jarInput);
@@ -115,9 +104,9 @@ public class AsmTransform extends Transform {
         while (enumeration.hasMoreElements()) {
             JarEntry originEntry = enumeration.nextElement();
             // com/demo/asm/lib/MethodObservable.class
-            String classFilePath = originEntry.getName();
-            if (classFilePath.endsWith(".class")) {
-                JarEntry destEntry = new JarEntry(classFilePath);
+            String classPath = originEntry.getName();
+            if (classPath.endsWith(".class")) {
+                JarEntry destEntry = new JarEntry(classPath);
                 jarOutputStream.putNextEntry(destEntry);
 
                 InputStream inputStream = originJar.getInputStream(originEntry);
@@ -125,9 +114,9 @@ public class AsmTransform extends Transform {
 
                 // 修改class文件内容
                 byte[] modifiedBytes = null;
-                if (filterModifyClass(classFilePath)) {
-                    System.out.printf("Jar Modify Class-->%s\n", classFilePath);
-                    modifiedBytes = modifyClass(sourceBytes);
+                if (filterModifyClass(classPath)) {// com/demo/module/ModuleActivity.class
+                    System.out.println("Jar Class-->" + classPath);
+                    modifiedBytes = modifyClass(sourceBytes, classPath);
                 }
                 if (modifiedBytes == null) {
                     modifiedBytes = sourceBytes;
@@ -149,8 +138,8 @@ public class AsmTransform extends Transform {
      */
     private void transformDirectory(TransformInvocation transformInvocation, DirectoryInput directoryInput) throws IOException {
         File directoryInputFile = directoryInput.getFile();
-        // /Users/guoxiaodong/Demos/AsmPluginDemo/app/build/intermediates/transforms/AsmTransform/debug/2
-        File dest = transformInvocation.getOutputProvider().getContentLocation(
+        // app/build/intermediates/transforms/MyTransform/debug/34
+        File transformDir = transformInvocation.getOutputProvider().getContentLocation(
                 directoryInput.getName(),// 697da665ad33881799cfc4f0d6ee2efd6010a5bc
                 directoryInput.getContentTypes(),// [CLASSES]
                 directoryInput.getScopes(),// [PROJECT]
@@ -159,62 +148,71 @@ public class AsmTransform extends Transform {
         if (!directoryInputFile.exists()) {
             return;
         }
+        Set<File> tempClassFileSet = new HashSet<>();
         traverseDirectory(
                 directoryInputFile.getAbsolutePath(),
                 transformInvocation.getContext().getTemporaryDir(),
-                directoryInputFile
+                directoryInputFile,
+                tempClassFileSet
         );
 
-        FileUtils.copyDirectory(directoryInputFile, dest);
+        FileUtils.copyDirectory(directoryInputFile, transformDir);
 
-        for (Map.Entry<String, File> entry : modifyMap.entrySet()) {
-            File target = new File(dest.getAbsolutePath() + File.separatorChar + entry.getKey().replace('.', File.separatorChar) + ".class");
+        for (File tempClassFile : tempClassFileSet) {
+            String tempClassPath = tempClassFile.getAbsolutePath();
+            String substring = tempClassPath.substring(tempClassPath.lastIndexOf("/"), tempClassPath.lastIndexOf(".class"));
+            File target = new File(transformDir.getAbsolutePath() + substring.replace('.', File.separatorChar) + ".class");
             if (target.exists()) {
                 target.delete();
             }
-            FileUtils.copyFile(entry.getValue(), target);
-            entry.getValue().delete();
+            FileUtils.copyFile(tempClassFile, target);
+            if (tempClassFile.exists()) {
+                tempClassFile.delete();
+            }
         }
     }
 
     /**
-     * 遍历目录下面的class文件
+     * 遍历{@param baseDir}目录下的class文件，修改后，写入{@param tempDir}目录下创建的class文件(文件名加上包名,例:com.demo.app.HomeActivity.class)
      *
-     * @param basedir 基准目录，和dir对比需要找到包路径
-     * @param tempDir 需要写入的临时目录 /Users/guoxiaodong/Demos/AsmPluginDemo/app/build/tmp/transformClassesWithAsmTransformForDebug
+     * @param baseDir 基准目录，和dir对比需要找到包路径
+     *                app/build/intermediates/javac/debug/classes
+     * @param tempDir 临时目录
+     *                app/build/tmp/transformClassesWithMyTransformForDebug
      * @param dir     class文件目录
+     *                app/build/intermediates/javac/debug/classes/com/demo/app/home
      */
-    private void traverseDirectory(String basedir, File tempDir, File dir) throws IOException {
+    private void traverseDirectory(String baseDir, File tempDir, File dir, Set<File> tempClassFileSet) throws IOException {
         for (File file : Objects.requireNonNull(dir.listFiles())) {
             if (file.isDirectory()) {
-                traverseDirectory(basedir, tempDir, file);
+                traverseDirectory(baseDir, tempDir, file, tempClassFileSet);
             } else if (file.getAbsolutePath().endsWith(".class")) {
-                String pathName = file.getAbsolutePath().replace(basedir + File.separator, "");
-                String className = pathName.replace(File.separator, ".").replace(".class", "");
+                String classPath = file.getAbsolutePath().replace(baseDir + File.separator, "");
                 byte[] sourceBytes = IOUtils.toByteArray(new FileInputStream(file));
                 byte[] modifiedBytes = null;
-                if (filterModifyClass(className + ".class")) {
-                    System.out.printf("Modify dir-->%s.class\n", className);
-                    modifiedBytes = modifyClass(sourceBytes);
+                if (filterModifyClass(classPath)) {// com.demo.app.home.HomeActivity.class
+                    System.out.println("Directory Class-->" + classPath);
+                    modifiedBytes = modifyClass(sourceBytes, classPath);
                 }
                 if (modifiedBytes == null) {
                     modifiedBytes = sourceBytes;
                 }
-                File modified = new File(tempDir, className + ".class");
-                if (modified.exists()) {
-                    modified.delete();
+                // androidx.databinding.DataBinderMapperImpl.class
+                String className = classPath.replace(File.separator, ".");
+                File tempClassFile = new File(tempDir, className);
+                if (tempClassFile.exists()) {
+                    tempClassFile.delete();
                 }
-                modified.createNewFile();
-                new FileOutputStream(modified).write(modifiedBytes);
-                modifyMap.put(className, modified);
+                if (tempClassFile.createNewFile()) {
+                    new FileOutputStream(tempClassFile).write(modifiedBytes);
+                    tempClassFileSet.add(tempClassFile);
+                }
             }
         }
     }
 
     /**
      * 判断是否修改
-     *
-     * @param classPath 例：com/demo/asm/lib/MethodObservable.class
      */
     private boolean filterModifyClass(String classPath) {
         return classPath.endsWith("Activity.class") && classPath.startsWith("com/") && !classPath.contains("$");
@@ -223,10 +221,11 @@ public class AsmTransform extends Transform {
     /**
      * 修改字节码文件
      */
-    private byte[] modifyClass(byte[] classBytes) {
+    private byte[] modifyClass(byte[] classBytes, String classPath) {
         ClassReader classReader = new ClassReader(classBytes);
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-        ClassVisitor asmClassVisitor = new AsmClassVisitor(classWriter);
+        String classDescriptor = String.format("L%s;", classPath.replace(".class", ""));
+        ClassVisitor asmClassVisitor = new MyClassVisitor(classWriter, classDescriptor);
         classReader.accept(asmClassVisitor, ClassReader.EXPAND_FRAMES);
         return classWriter.toByteArray();
     }

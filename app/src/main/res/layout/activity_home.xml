@@ -22,13 +22,13 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="@{viewModel.onJumpClick}"
+            android:onClick="@{viewModel::onJumpClick}"
             android:text="Jump ModuleActivity" />
 
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="@{viewModel.onGetDataClick}"
+            android:onClick="@{viewModel::onGetDataClick}"
             android:text="Get data" />
     </LinearLayout>
 </layout>

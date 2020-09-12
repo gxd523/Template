@@ -9,9 +9,12 @@ import org.objectweb.asm.Opcodes;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 import static org.objectweb.asm.Opcodes.IRETURN;
 
-public class AsmClassVisitor extends ClassVisitor {
-    public AsmClassVisitor(ClassVisitor classVisitor) {
+public class MyClassVisitor extends ClassVisitor {
+    private String classDescriptor;
+
+    public MyClassVisitor(ClassVisitor classVisitor, String classDescriptor) {
         super(Opcodes.ASM7, classVisitor);
+        this.classDescriptor = classDescriptor;
     }
 
     @Override
@@ -24,7 +27,6 @@ public class AsmClassVisitor extends ClassVisitor {
                     super.visit(name, value);
                     if (name.equals("value") && value instanceof Integer) {
                         int layoutResId = (Integer) value;
-
                         MethodVisitor methodVisitor = visitMethod(ACC_PUBLIC, "getContentViewId", "()I", null, null);
                         methodVisitor.visitCode();
                         Label label0 = new Label();
@@ -34,7 +36,7 @@ public class AsmClassVisitor extends ClassVisitor {
                         methodVisitor.visitInsn(IRETURN);
                         Label label1 = new Label();
                         methodVisitor.visitLabel(label1);
-                        methodVisitor.visitLocalVariable("this", "Lcom/demo/app/home/HomeActivity;", null, label0, label1, 0);
+                        methodVisitor.visitLocalVariable("this", classDescriptor, null, label0, label1, 0);
                         methodVisitor.visitMaxs(1, 1);
                         methodVisitor.visitEnd();
                     }

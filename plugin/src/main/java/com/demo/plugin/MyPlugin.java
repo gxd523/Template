@@ -14,6 +14,6 @@ public class MyPlugin implements Plugin<Project> {
         if (appExtension == null) {
             return;
         }
-        appExtension.registerTransform(new AsmTransform());// 注册优先于task任务的添加
+        appExtension.registerTransform(new MyTransform());// 注册优先于task任务的添加
     }
 }
