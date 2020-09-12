@@ -1,0 +1,14 @@
+android {
+    defaultConfig {
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = [moduleName: project.getName()]
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation project(path: ':bridge:api')
+    annotationProcessor project(path: ':bridge:processor')
+}

@@ -1,0 +1,11 @@
+apply plugin: 'com.android.library'
+apply from: '../config.gradle'
+apply from: '../binding.gradle'
+apply from: '../bridge.gradle'
+
+dependencies {
+    implementation project(path: ':bean')
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.6'
+    implementation 'androidx.databinding:databinding-runtime:4.0.1'
+    api project(path: ':base')
+}

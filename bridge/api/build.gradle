@@ -1,0 +1,8 @@
+apply plugin: 'com.android.library'
+apply from: '../../config.gradle'
+
+dependencies {
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.6'
+    implementation project(path: ':bean')
+    api project(path: ':bridge:annotation')
+}

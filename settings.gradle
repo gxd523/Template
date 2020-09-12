@@ -1,0 +1,14 @@
+include ':bridge:annotation'
+include ':bridge:processor'
+include ':plugin'
+
+include ':base'
+include ':bean'
+include ':bridge:api'
+
+include ':module'
+
+include ':app'
+include ':standalone:module_app'
+
+rootProject.name = "Template"
