@@ -3,8 +3,7 @@ package com.demo.module;
 import android.os.Bundle;
 
 import com.demo.base.BaseActivity;
-import com.demo.module1.R;
-import com.demo.module1.databinding.ActivityModuleBinding;
+import com.demo.module.databinding.ActivityModuleBinding;
 
 //@Layout(value = R.layout.activity_module)
 public class ModuleActivity extends BaseActivity<ActivityModuleBinding, ModuleViewModel> {

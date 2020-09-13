@@ -143,7 +143,7 @@ public class MyTransform extends Transform {
                 // com/demo/app/home/HomeActivity.class
                 String classPath = file.getAbsolutePath().replace(transformDir.getAbsolutePath() + File.separator, "");
                 if (filterModifyClass(classPath)) {
-                    System.out.println("Directory Class-->" + classPath);
+                    System.out.println("Dir Class-->" + classPath);
                     byte[] sourceBytes = IOUtils.toByteArray(new FileInputStream(file));
                     byte[] modifiedBytes = modifyClass(sourceBytes, classPath);
                     if (modifiedBytes != null) {
