@@ -23,7 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -125,73 +124,33 @@ public class MyTransform extends Transform {
         if (!directoryInputFile.exists()) {
             return;
         }
-        Set<File> tempClassFileSet = new HashSet<>();
-        traversalDirectory(
-                directoryInputFile.getAbsolutePath(),
-                transformInvocation.getContext().getTemporaryDir(),
-                directoryInputFile,
-                tempClassFileSet
-        );
-
+        // classes目录下的所有class文件先复制到transform目录下
         FileUtils.copyDirectory(directoryInputFile, transformDir);
-
-        /*
-          1、遍历temp目录下的所有临时创建的class文件(com.demo.Activity.class)
-          2、在transform目录创建class文件(com/demo/Activity.class)
-          3、将temp目录创建的class文件中的内容复制到transform目录创建的class文件中
-          4、删除temp目录创建的class文件
-          */
-        for (File tempClassFile : tempClassFileSet) {
-            String tempClassPath = tempClassFile.getAbsolutePath();
-            String substring = tempClassPath.substring(tempClassPath.lastIndexOf("/"), tempClassPath.lastIndexOf(".class"));
-            File transformClassFile = new File(transformDir.getAbsolutePath() + substring.replace('.', File.separatorChar) + ".class");
-            if (transformClassFile.exists()) {
-                transformClassFile.delete();
-            }
-            FileUtils.copyFile(tempClassFile, transformClassFile);
-            if (tempClassFile.exists()) {
-                tempClassFile.delete();
-            }
-        }
+        traversalDirectory(transformDir, transformDir);
     }
 
     /**
-     * 遍历{@param directoryInputPath}目录下的class文件，修改后，写入{@param tempDir}目录下创建的class文件(文件名加上包名,例:com.demo.app.HomeActivity.class)
+     * 遍历{@param transformDir}目录下要修改的class文件，修改后，覆盖原文件
      *
-     * @param directoryInputPath 基准目录，和dir对比需要找到包路径
-     *                           app/build/intermediates/javac/debug/classes
-     * @param tempDir            临时目录
-     *                           app/build/tmp/transformClassesWithMyTransformForDebug
-     * @param dir                class文件目录
-     *                           app/build/intermediates/javac/debug/classes/com/demo/app/home
+     * @param transformDir app/build/intermediates/transforms/MyTransform/debug/34
+     * @param dir          app/build/intermediates/transforms/MyTransform/debug/34/com/demo/app/home
      */
-    private void traversalDirectory(String directoryInputPath, File tempDir, File dir, Set<File> tempClassFileSet) throws IOException {
+    private void traversalDirectory(File transformDir, File dir) throws IOException {
         for (File file : Objects.requireNonNull(dir.listFiles())) {
             if (file.isDirectory()) {
-                traversalDirectory(directoryInputPath, tempDir, file, tempClassFileSet);
+                traversalDirectory(transformDir, file);
             } else if (file.getAbsolutePath().endsWith(".class")) {
-                String classPath = file.getAbsolutePath().replace(directoryInputPath + File.separator, "");
-                byte[] sourceBytes = IOUtils.toByteArray(new FileInputStream(file));
-                byte[] modifiedBytes = null;
-                if (filterModifyClass(classPath)) {// com.demo.app.home.HomeActivity.class
+                // com/demo/app/home/HomeActivity.class
+                String classPath = file.getAbsolutePath().replace(transformDir.getAbsolutePath() + File.separator, "");
+                if (filterModifyClass(classPath)) {
                     System.out.println("Directory Class-->" + classPath);
-                    modifiedBytes = modifyClass(sourceBytes, classPath);
-                }
-                if (modifiedBytes == null) {
-                    modifiedBytes = sourceBytes;
-                }
-                /*
-                    1、在temp目录创建class文件(androidx.databinding.DataBinderMapperImpl.class)
-                    2、将修改的class内容写到temp目录创建的class文件
-                 */
-                String className = classPath.replace(File.separator, ".");
-                File tempClassFile = new File(tempDir, className);
-                if (tempClassFile.exists()) {
-                    tempClassFile.delete();
-                }
-                if (tempClassFile.createNewFile()) {
-                    new FileOutputStream(tempClassFile).write(modifiedBytes);
-                    tempClassFileSet.add(tempClassFile);
+                    byte[] sourceBytes = IOUtils.toByteArray(new FileInputStream(file));
+                    byte[] modifiedBytes = modifyClass(sourceBytes, classPath);
+                    if (modifiedBytes != null) {
+                        FileOutputStream outputStream = new FileOutputStream(file, false);
+                        outputStream.write(modifiedBytes);
+                        outputStream.close();
+                    }
                 }
             }
         }
