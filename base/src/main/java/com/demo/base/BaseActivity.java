@@ -27,6 +27,7 @@ public abstract class BaseActivity<VDB extends ViewDataBinding, VM extends Andro
             binding.setLifecycleOwner(this);
         }
         createViewModel();
+        bindViewModel();
     }
 
     public void createViewModel() {
@@ -47,5 +48,8 @@ public abstract class BaseActivity<VDB extends ViewDataBinding, VM extends Andro
     @LayoutRes
     public int getContentViewId() {
         return 0;
+    }
+
+    public void bindViewModel() {
     }
 }

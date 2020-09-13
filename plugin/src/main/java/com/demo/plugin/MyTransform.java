@@ -160,7 +160,7 @@ public class MyTransform extends Transform {
      * 判断是否修改
      */
     private boolean filterModifyClass(String classPath) {
-        return classPath.endsWith("Activity.class") && classPath.startsWith("com/") && !classPath.contains("$");
+        return classPath.endsWith("Activity.class") && classPath.startsWith("com/") && !classPath.contains("$") && !classPath.endsWith("BaseActivity.class");
     }
 
     /**

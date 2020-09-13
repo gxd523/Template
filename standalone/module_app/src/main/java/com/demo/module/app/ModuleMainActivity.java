@@ -11,8 +11,6 @@ public class ModuleMainActivity extends BaseActivity<ActivityModuleMainBinding, 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding.setViewModel(viewModel);
-
         viewModel.title.postValue(getClass().getSimpleName());
     }
 }
