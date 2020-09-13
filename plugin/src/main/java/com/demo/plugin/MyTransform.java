@@ -32,29 +32,6 @@ import java.util.jar.JarOutputStream;
 
 public class MyTransform extends Transform {
     @Override
-    public String getName() {
-        return MyTransform.class.getSimpleName();
-    }
-
-    @Override
-    public Set<QualifiedContent.ContentType> getInputTypes() {
-        return TransformManager.CONTENT_CLASS;
-    }
-
-    @Override
-    public Set<? super QualifiedContent.Scope> getScopes() {
-        return TransformManager.SCOPE_FULL_PROJECT;
-    }
-
-    /**
-     * 是否开启增量编译
-     */
-    @Override
-    public boolean isIncremental() {
-        return false;
-    }
-
-    @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         super.transform(transformInvocation);
         if (!isIncremental()) {
@@ -134,7 +111,7 @@ public class MyTransform extends Transform {
     /**
      * 对directory进行处理
      *
-     * @param directoryInput /Users/guoxiaodong/Demos/AsmPluginDemo/app/build/intermediates/javac/debug/classes
+     * @param directoryInput app/build/intermediates/javac/debug/classes
      */
     private void transformDirectory(TransformInvocation transformInvocation, DirectoryInput directoryInput) throws IOException {
         File directoryInputFile = directoryInput.getFile();
@@ -149,7 +126,7 @@ public class MyTransform extends Transform {
             return;
         }
         Set<File> tempClassFileSet = new HashSet<>();
-        traverseDirectory(
+        traversalDirectory(
                 directoryInputFile.getAbsolutePath(),
                 transformInvocation.getContext().getTemporaryDir(),
                 directoryInputFile,
@@ -158,14 +135,20 @@ public class MyTransform extends Transform {
 
         FileUtils.copyDirectory(directoryInputFile, transformDir);
 
+        /*
+          1、遍历temp目录下的所有临时创建的class文件(com.demo.Activity.class)
+          2、在transform目录创建class文件(com/demo/Activity.class)
+          3、将temp目录创建的class文件中的内容复制到transform目录创建的class文件中
+          4、删除temp目录创建的class文件
+          */
         for (File tempClassFile : tempClassFileSet) {
             String tempClassPath = tempClassFile.getAbsolutePath();
             String substring = tempClassPath.substring(tempClassPath.lastIndexOf("/"), tempClassPath.lastIndexOf(".class"));
-            File target = new File(transformDir.getAbsolutePath() + substring.replace('.', File.separatorChar) + ".class");
-            if (target.exists()) {
-                target.delete();
+            File transformClassFile = new File(transformDir.getAbsolutePath() + substring.replace('.', File.separatorChar) + ".class");
+            if (transformClassFile.exists()) {
+                transformClassFile.delete();
             }
-            FileUtils.copyFile(tempClassFile, target);
+            FileUtils.copyFile(tempClassFile, transformClassFile);
             if (tempClassFile.exists()) {
                 tempClassFile.delete();
             }
@@ -173,21 +156,21 @@ public class MyTransform extends Transform {
     }
 
     /**
-     * 遍历{@param baseDir}目录下的class文件，修改后，写入{@param tempDir}目录下创建的class文件(文件名加上包名,例:com.demo.app.HomeActivity.class)
+     * 遍历{@param directoryInputPath}目录下的class文件，修改后，写入{@param tempDir}目录下创建的class文件(文件名加上包名,例:com.demo.app.HomeActivity.class)
      *
-     * @param baseDir 基准目录，和dir对比需要找到包路径
-     *                app/build/intermediates/javac/debug/classes
-     * @param tempDir 临时目录
-     *                app/build/tmp/transformClassesWithMyTransformForDebug
-     * @param dir     class文件目录
-     *                app/build/intermediates/javac/debug/classes/com/demo/app/home
+     * @param directoryInputPath 基准目录，和dir对比需要找到包路径
+     *                           app/build/intermediates/javac/debug/classes
+     * @param tempDir            临时目录
+     *                           app/build/tmp/transformClassesWithMyTransformForDebug
+     * @param dir                class文件目录
+     *                           app/build/intermediates/javac/debug/classes/com/demo/app/home
      */
-    private void traverseDirectory(String baseDir, File tempDir, File dir, Set<File> tempClassFileSet) throws IOException {
+    private void traversalDirectory(String directoryInputPath, File tempDir, File dir, Set<File> tempClassFileSet) throws IOException {
         for (File file : Objects.requireNonNull(dir.listFiles())) {
             if (file.isDirectory()) {
-                traverseDirectory(baseDir, tempDir, file, tempClassFileSet);
+                traversalDirectory(directoryInputPath, tempDir, file, tempClassFileSet);
             } else if (file.getAbsolutePath().endsWith(".class")) {
-                String classPath = file.getAbsolutePath().replace(baseDir + File.separator, "");
+                String classPath = file.getAbsolutePath().replace(directoryInputPath + File.separator, "");
                 byte[] sourceBytes = IOUtils.toByteArray(new FileInputStream(file));
                 byte[] modifiedBytes = null;
                 if (filterModifyClass(classPath)) {// com.demo.app.home.HomeActivity.class
@@ -197,7 +180,10 @@ public class MyTransform extends Transform {
                 if (modifiedBytes == null) {
                     modifiedBytes = sourceBytes;
                 }
-                // androidx.databinding.DataBinderMapperImpl.class
+                /*
+                    1、在temp目录创建class文件(androidx.databinding.DataBinderMapperImpl.class)
+                    2、将修改的class内容写到temp目录创建的class文件
+                 */
                 String className = classPath.replace(File.separator, ".");
                 File tempClassFile = new File(tempDir, className);
                 if (tempClassFile.exists()) {
@@ -228,5 +214,28 @@ public class MyTransform extends Transform {
         ClassVisitor asmClassVisitor = new MyClassVisitor(classWriter, classDescriptor);
         classReader.accept(asmClassVisitor, ClassReader.EXPAND_FRAMES);
         return classWriter.toByteArray();
+    }
+
+    @Override
+    public String getName() {
+        return MyTransform.class.getSimpleName();
+    }
+
+    @Override
+    public Set<QualifiedContent.ContentType> getInputTypes() {
+        return TransformManager.CONTENT_CLASS;
+    }
+
+    @Override
+    public Set<? super QualifiedContent.Scope> getScopes() {
+        return TransformManager.SCOPE_FULL_PROJECT;
+    }
+
+    /**
+     * 是否开启增量编译
+     */
+    @Override
+    public boolean isIncremental() {
+        return false;
     }
 }
