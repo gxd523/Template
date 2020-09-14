@@ -40,7 +40,7 @@ public abstract class BaseActivity<VDB extends ViewDataBinding, VM extends Andro
             } else {
                 modelClass = BaseViewModel.class;
             }
-            viewModel = (VM) BaseApplication.getInstance().viewModelFactory.create(modelClass);
+            viewModel = (VM) BaseApplication.viewModelFactory.create(modelClass);
 //            mViewModel.setObjectLifecycleTransformer(bindToLifecycle());
         }
     }

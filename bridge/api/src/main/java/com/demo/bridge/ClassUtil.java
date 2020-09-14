@@ -36,17 +36,18 @@ public class ClassUtil {
         return sourcePathList;
     }
 
-    public static Set<String> getGenerateBridgeClassName(Application context, final String packageName) throws Exception {
+    /**
+     * 耗时操作
+     */
+    public static Set<String> getGenerateClassSet(Application context, final String packageName) throws Exception {
         final Set<String> classNameSet = new HashSet<>();
         List<String> apkPathList = getApkPathList(context);
-        // 使用同步计数器判断均处理完成
         final CountDownLatch countDownLatch = new CountDownLatch(apkPathList.size());
         ExecutorService executorService = Executors.newFixedThreadPool(apkPathList.size());
         for (final String apkPath : apkPathList) {
             executorService.execute(() -> {
                 DexFile dexfile = null;
                 try {
-                    // TODO: 2020/4/6 加载apk中的dex并遍历,获得所有包名为{packageName}的类
                     dexfile = new DexFile(apkPath);
                     Enumeration<String> dexEntries = dexfile.entries();
                     while (dexEntries.hasMoreElements()) {
@@ -65,12 +66,11 @@ public class ClassUtil {
                             e.printStackTrace();
                         }
                     }
-                    //释放1个
                     countDownLatch.countDown();
                 }
             });
         }
-        countDownLatch.await();// 等待执行完成
+        countDownLatch.await();
         return classNameSet;
     }
 }
