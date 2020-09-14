@@ -8,7 +8,7 @@
         android:icon="@android:mipmap/sym_def_app_icon"
         android:label="组件化"
         android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen">
-        <activity android:name="com.demo.app.FirstActivity" />
+        <activity android:name="com.demo.app.detail.DetailActivity" />
         <activity android:name="com.demo.app.home.HomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

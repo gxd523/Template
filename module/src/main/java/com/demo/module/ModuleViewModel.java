@@ -23,7 +23,7 @@ public final class ModuleViewModel extends BaseViewModel {
     public void onClick(View view) {
         AppBridge appBridge = BridgeManager.getBridge(AppBridge.class);
         if (appBridge != null) {
-            appBridge.launchFirstActivity(view.getContext());
+            appBridge.launchDetailActivity(view.getContext());
         }
     }
 }
