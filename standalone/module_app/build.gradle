@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'plugin'
 apply from: '../../config.gradle'
 apply from: '../../binding.gradle'
 

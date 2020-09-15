@@ -64,11 +64,16 @@ public class MyTransform extends Transform {
      */
     private void transformJar(TransformInvocation transformInvocation, JarInput jarInput) throws IOException {
         File originJarFile = jarInput.getFile();
-        // app/build/tmp/transformClassesWithMyTransformForDebug
-        File tempDir = transformInvocation.getContext().getTemporaryDir();
-        // app/build/tmp/transformClassesWithMyTransformForDebug/temp_databinding-adapters-4.0.1-runtime.jar
-        File tempJar = new File(tempDir, "temp_" + originJarFile.getName());
-        JarOutputStream tempJarOutputStream = new JarOutputStream(new FileOutputStream(tempJar));
+        // databinding-adapters-4.0.1-runtime_d6cd7b73
+        String destName = originJarFile.getName().replace(".jar", "") + "_" + DigestUtils.md5Hex(originJarFile.getAbsolutePath()).substring(0, 8);
+        // app/build/intermediates/transforms/MyTransform/debug/0.jar
+        File transformJarFile = transformInvocation.getOutputProvider().getContentLocation(
+                destName,
+                jarInput.getContentTypes(),// [CLASSES]
+                jarInput.getScopes(),// [SUB_PROJECTS]
+                Format.JAR
+        );
+        JarOutputStream transformJarOutputStream = new JarOutputStream(new FileOutputStream(transformJarFile));
 
         // 遍历原jar文件寻找class文件
         JarFile originJar = new JarFile(originJarFile);
@@ -79,7 +84,7 @@ public class MyTransform extends Transform {
             String classPath = originEntry.getName();
             if (classPath.endsWith(".class")) {
                 JarEntry destEntry = new JarEntry(classPath);
-                tempJarOutputStream.putNextEntry(destEntry);
+                transformJarOutputStream.putNextEntry(destEntry);
 
                 InputStream inputStream = originJar.getInputStream(originEntry);
                 byte[] sourceBytes = IOUtils.toByteArray(inputStream);
@@ -93,23 +98,12 @@ public class MyTransform extends Transform {
                 if (modifiedBytes == null) {
                     modifiedBytes = sourceBytes;
                 }
-                tempJarOutputStream.write(modifiedBytes);
+                transformJarOutputStream.write(modifiedBytes);
             }
-            tempJarOutputStream.closeEntry();
+            transformJarOutputStream.closeEntry();
         }
-        tempJarOutputStream.close();
+        transformJarOutputStream.close();
         originJar.close();
-        // databinding-adapters-4.0.1-runtime_d6cd7b73
-        String destName = originJarFile.getName().replace(".jar", "") + "_" + DigestUtils.md5Hex(originJarFile.getAbsolutePath()).substring(0, 8);
-        // app/build/intermediates/transforms/MyTransform/debug/0.jar
-        File destinationDirectory = transformInvocation.getOutputProvider().getContentLocation(
-                destName,
-                jarInput.getContentTypes(),// [CLASSES]
-                jarInput.getScopes(),// [SUB_PROJECTS]
-                Format.JAR
-        );
-        // 复制修改后jar到输出路径
-        FileUtils.copyFile(tempJar, destinationDirectory);
     }
 
     /**
