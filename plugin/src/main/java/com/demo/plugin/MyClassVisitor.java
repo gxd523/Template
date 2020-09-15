@@ -18,6 +18,9 @@ public class MyClassVisitor extends ClassVisitor implements Opcodes {
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         super.visit(version, access, name, signature, superName, interfaces);
+        if (signature == null || !signature.contains("<")) {
+            return;
+        }
         split = signature.substring(signature.indexOf('<') + 1, signature.indexOf('>')).split(";");
     }
 

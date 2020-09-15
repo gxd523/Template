@@ -22,9 +22,14 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -42,15 +47,34 @@ public class MyTransform extends Transform {
         if (!isIncremental()) {
             transformInvocation.getOutputProvider().deleteAll();
         }
-
+        long start = System.currentTimeMillis();
+        ExecutorService threadPool = Executors.newFixedThreadPool(4);
+        List<QualifiedContent> taskList = new ArrayList<>();
         for (TransformInput transformInput : transformInvocation.getInputs()) {
-            for (JarInput jarInput : transformInput.getJarInputs()) {
-                transformJar(transformInvocation, jarInput);
-            }
-            for (DirectoryInput directoryInput : transformInput.getDirectoryInputs()) {
-                transformDirectory(transformInvocation, directoryInput);
-            }
+            taskList.addAll(transformInput.getJarInputs());
+            taskList.addAll(transformInput.getDirectoryInputs());
         }
+        CountDownLatch countDownLatch = new CountDownLatch(taskList.size());
+        for (QualifiedContent task : taskList) {
+            threadPool.execute(() -> {
+                try {
+                    if (task instanceof JarInput) {
+                        transformJar(transformInvocation, (JarInput) task);
+                    } else if (task instanceof DirectoryInput) {
+                        transformDirectory(transformInvocation, (DirectoryInput) task);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+        countDownLatch.await();
+        threadPool.shutdown();
+        while (!threadPool.isTerminated()) {
+        }
+        System.out.printf("%s个任务耗时...%s\n", taskList.size(), System.currentTimeMillis() - start);
     }
 
     /**
