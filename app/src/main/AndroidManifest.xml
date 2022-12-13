@@ -1,15 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.demo.app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:name="com.demo.app.MyApplication"
         android:icon="@android:mipmap/sym_def_app_icon"
-        android:label="组件化"
+        android:label="Template"
         android:theme="@android:style/Theme.Light.NoTitleBar.Fullscreen">
-        <activity android:name="com.demo.app.detail.DetailActivity" />
-        <activity android:name="com.demo.app.home.HomeActivity">
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

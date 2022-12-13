@@ -1,14 +1,16 @@
-include ':bridge:annotation'
-include ':bridge:processor'
-include ':plugin'
-
-include ':base'
-include ':bean'
-include ':bridge:api'
-
-include ':module'
-
-include ':app'
-include ':standalone:module_app'
-
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 rootProject.name = "Template"
+include ':app'

@@ -1,21 +1,47 @@
-apply plugin: 'com.android.application'
-apply plugin: 'plugin'
-apply from: '../config.gradle'
-apply from: '../binding.gradle'
-apply from: '../bridge.gradle'
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
 
 android {
+    namespace 'com.gxd.template'
+    compileSdk 33
+
     defaultConfig {
-        applicationId "com.demo.app"
+        applicationId "com.gxd.template"
+        minSdk 23
+        targetSdk 33
         versionCode 1
         versionName "1.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    viewBinding {
+        enabled = true
     }
 }
 
 dependencies {
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.6'
-    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
-    implementation project(path: ':bean')
-    api project(path: ':base')
-    implementation project(path: ':module')
+    implementation 'org.jetbrains.kotlin:kotlin-reflect:1.7.20'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
+
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    def lifecycle_version = "2.5.1"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
+
+    implementation 'androidx.activity:activity-ktx:1.6.1'
+//    implementation 'androidx.core:core-ktx:1.9.0'
 }
